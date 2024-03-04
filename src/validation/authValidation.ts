@@ -14,11 +14,9 @@ const handleValidationErrors = async (
 };
 
 export const validationRegisterRequest = [
-  body("name").isString().notEmpty().withMessage("Name Must be string"),
   body("phone")
     .isString()
     .notEmpty()
-    .isMobilePhone("en-IN")
     .withMessage("Enter valid phone Number"),
   body("email")
     .isString()

@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import connectDB from "./config/connectDB";
-import { ALLOWED_ORIGINS } from "./config/allowedOrigins";
+// import { ALLOWED_ORIGINS } from "./config/allowedOrigins";
 import { ErrorMiddleware } from "./middleware/extendError";
 import { v2 as cloudinary } from "cloudinary";
 import authRoutes from "./routes/authRoutes";
@@ -23,10 +23,11 @@ app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ALLOWED_ORIGINS,
+    origin: "http://localhost:3000",
     credentials: true,
   })
 );
+console.log(process.env.FRONTEND_URL)
 
 // health
 app.get("/health", (req: Request, res: Response) => {

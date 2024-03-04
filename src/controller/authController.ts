@@ -23,7 +23,7 @@ export const registrationUser = CatchAsyncError(
     next: NextFunction
   ) => {
     try {
-      const { name, email, password, phone } = req.body;
+      const { email, password, phone } = req.body;
 
       const isEmailExist = await User.findOne({ email });
       if (isEmailExist) {
@@ -31,14 +31,13 @@ export const registrationUser = CatchAsyncError(
       }
 
       const user: IRegistrationBody = {
-        name,
         email,
         password,
         phone,
       };
       const activationToken = createActivation(user);
       const activationCode = activationToken.activationCode;
-      const data = { user: { name: user.name }, activationCode };
+      const data = { user: { name: user.email }, activationCode };
       //   send the dynamica data to the ejs
 
       await SendMail({
@@ -148,7 +147,7 @@ export const loginUser = CatchAsyncError(
           },
         },
         process.env.ACCESS_TOKEN_SECRET!,
-        { expiresIn: "15m" }
+        { expiresIn: "5s" } //15m
       );
 
       const refreshToken = jwt.sign(
@@ -162,7 +161,8 @@ export const loginUser = CatchAsyncError(
         httpOnly: true, //accessible only by web server
         secure: true, //https
         sameSite: "none", //cross-site cookie
-        maxAge: 7 * 24 * 60 * 60 * 1000, //cookie expiry: set to match rT
+        // maxAge: 7 * 24 * 60 * 60 * 1000, //cookie expiry: set to match rT
+        maxAge: 5 * 1000, //cookie expiry: set to match rT
       });
 
       // Send accessToken containing username and roles
