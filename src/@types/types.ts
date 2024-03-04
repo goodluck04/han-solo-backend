@@ -7,7 +7,7 @@ export interface EmailOptions {
 
 export interface IRegistrationBody {
   email: string;
-  password: string;
+  password?: string;
   avatar?: string;
   phone?: string;
 }

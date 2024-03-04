@@ -88,7 +88,7 @@ export const activateUser = CatchAsyncError(
         return next(new ErrorHandler("Invalid activation code", 400));
       }
 
-      const { name, email, password,phone } = newUser.user;
+      const { name, email, password, phone } = newUser.user;
 
       // create username
       const username = email.split("@")[0];
@@ -102,13 +102,13 @@ export const activateUser = CatchAsyncError(
         email,
         password: hashedPassword,
         username: finalUsername,
-        phone
+        phone,
       });
 
       res.status(201).json({
         success: true,
       });
-    } catch (error:any) {
+    } catch (error: any) {
       console.log("ACTIVATE-USER-ERROR:", error.message);
       next(error.message);
     }
@@ -183,53 +183,125 @@ const logout = (req: Request, res: Response) => {
 };
 
 // refreah token
-export const refresh = (req: Request, res: Response, next: NextFunction) => {
-  const cookies = req.cookies;
+export const refresh = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const cookies = req.cookies;
 
-  if (!cookies?.jwt) return next(new ErrorHandler("Unauthorized", 401));
+    if (!cookies?.jwt) return next(new ErrorHandler("Unauthorized", 401));
 
-  const refreshToken = cookies.jwt;
+    const refreshToken = cookies.jwt;
 
-  jwt.verify(
-    refreshToken,
-    process.env.REFRESH_TOKEN_SECRET!,
-    async (err: any, decoded: any) => {
-      if (err) return next(new ErrorHandler("Forbidden", 403));
+    jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET!,
+      async (err: any, decoded: any) => {
+        if (err) return next(new ErrorHandler("Forbidden", 403));
 
-      const foundUser = await User.findOne({
-        _id: decoded.userId,
-      }).exec();
+        const foundUser = await User.findOne({
+          _id: decoded.userId,
+        }).exec();
 
-      if (!foundUser) return next(new ErrorHandler("Unauthorized", 401));
+        if (!foundUser) return next(new ErrorHandler("Unauthorized", 401));
 
-      // Generate a new refresh token
-      const newRefreshToken = jwt.sign(
-        { userId: foundUser._id },
-        process.env.REFRESH_TOKEN_SECRET!,
-        { expiresIn: "7d" }
-      );
+        // Generate a new refresh token
+        const newRefreshToken = jwt.sign(
+          { userId: foundUser._id },
+          process.env.REFRESH_TOKEN_SECRET!,
+          { expiresIn: "7d" }
+        );
 
-      // Generate a new access token
-      const accessToken = jwt.sign(
-        {
-          UserInfo: {
-            userId: foundUser._id,
+        // Generate a new access token
+        const accessToken = jwt.sign(
+          {
+            UserInfo: {
+              userId: foundUser._id,
+            },
           },
-        },
-        process.env.ACCESS_TOKEN_SECRET!,
-        { expiresIn: "15m" }
-      );
+          process.env.ACCESS_TOKEN_SECRET!,
+          { expiresIn: "15m" }
+        );
 
-      // Update the refresh token in the client
-      res.cookie("jwt", newRefreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        // Update the refresh token in the client
+        res.cookie("jwt", newRefreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        // Send the new access token to the client
+        res.json({ accessToken });
+      }
+    );
+  }
+);
+
+//forgot password
+export const forgotPassoword = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const isUserExist = await User.findOne({ email: req.body.email });
+
+      if (!isUserExist) {
+        return next(new ErrorHandler("Email does not exist.", 400));
+      }
+
+      const user: IRegistrationBody = {
+        email: isUserExist.email,
+      };
+
+      const activationToken = createActivation(user);
+      const activationCode = activationToken.activationCode;
+      const data = { user: { name: user.email }, activationCode };
+
+      // send email
+      await SendMail({
+        email: user.email,
+        subject: "Change your password",
+        template: "activation-mail.ejs",
+        data,
       });
 
-      // Send the new access token to the client
-      res.json({ accessToken });
+      res.status(200).json({
+        success: true,
+        message: `Please check your email: ${user.email} for OTP.`,
+        activationToken: activationToken.token,
+      });
+    } catch (error:any) {
+      console.log("[FORGET_PASSWORD_ERROR]:", error);
+      return next(error.message);
     }
-  );
-};
+  }
+);
+
+export const changePassword = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { activation_token, activation_code, newPassword } = req.body;
+      const newUser: { user: IUser; activationCode: string } = jwt.verify(
+        activation_token,
+        process.env.ACTIVATION_SECRET!
+      ) as { user: IUser; activationCode: string };
+      if (newUser.activationCode !== activation_code) {
+        return next(new ErrorHandler("Invalid activation code", 400));
+      }
+
+      const { email } = newUser.user;
+      // bcrypt the password then store
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await User.findOneAndUpdate(
+        {
+          email,
+        },
+        { password: hashedPassword },
+        { new: true }
+      );
+      res.status(200).json({
+        success: true,
+      });
+    } catch (error: any) {
+      console.log("[CHANGE_PASSWORD_ERROR]:", error.message);
+      next(error.message);
+    }
+  }
+);
