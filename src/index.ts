@@ -3,7 +3,6 @@ import express, { Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import connectDB from "./config/connectDB";
-// import { ALLOWED_ORIGINS } from "./config/allowedOrigins";
 import { ErrorMiddleware } from "./middleware/extendError";
 import { v2 as cloudinary } from "cloudinary";
 import authRoutes from "./routes/authRoutes";
