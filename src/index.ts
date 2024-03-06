@@ -24,11 +24,10 @@ app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
-console.log(process.env.FRONTEND_URL);
 
 // health
 app.get("/health", (req: Request, res: Response) => {
