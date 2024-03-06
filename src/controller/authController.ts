@@ -3,8 +3,6 @@ import { CatchAsyncError } from "../middleware/catchAsyncError";
 import User, { IUser } from "../model/user";
 import ErrorHandler from "../config/ErrorHandler";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
-import ejs from "ejs";
-import path from "path";
 import SendMail from "../utils/sendMail";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
@@ -13,7 +11,9 @@ import {
   IActivationToken,
   ILoginRequest,
   IActivationRequest,
+  ISocialAuthRequest,
 } from "../@types/types";
+import generatePassword from "../utils/randomPasswordGenerator";
 
 // register user
 export const registrationUser = CatchAsyncError(
@@ -59,7 +59,7 @@ export const registrationUser = CatchAsyncError(
 );
 
 // create activation code util func
-export const createActivation = (user: IRegistrationBody): IActivationToken => {
+const createActivation = (user: IRegistrationBody): IActivationToken => {
   const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
   const token = jwt.sign(
     { user, activationCode },
@@ -147,7 +147,7 @@ export const loginUser = CatchAsyncError(
           },
         },
         process.env.ACCESS_TOKEN_SECRET!,
-        { expiresIn: "5s" } //15m
+        { expiresIn: "15m" } //15m
       );
 
       const refreshToken = jwt.sign(
@@ -161,21 +161,76 @@ export const loginUser = CatchAsyncError(
         httpOnly: true, //accessible only by web server
         secure: true, //https
         sameSite: "none", //cross-site cookie
-        // maxAge: 7 * 24 * 60 * 60 * 1000, //cookie expiry: set to match rT
-        maxAge: 5 * 1000, //cookie expiry: set to match rT
+        maxAge: 7 * 24 * 60 * 60 * 1000, //cookie expiry: set to match rT
+        // maxAge: 5 * 1000, //cookie expiry: set to match rT
       });
 
       // Send accessToken containing username and roles
       res.json({ accessToken });
-    } catch (error) {
-      console.log("LOGIN-USER-ERROR:", error);
-      next(error);
+    } catch (error: any) {
+      console.log("[LOGIN_USER_ERROR]:", error);
+      next(error.message);
+    }
+  }
+);
+
+export const socialAuth = CatchAsyncError(
+  async (
+    req: Request<{}, {}, ISocialAuthRequest>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { email, name, avatar } = req.body;
+
+      let foundUser = await User.findOne({ email });
+
+      if (!foundUser) {
+        const hashedPassword = await bcrypt.hash(generatePassword(), 10);
+        foundUser = await User.create({
+          name,
+          avatar,
+          email,
+          password: hashedPassword,
+        });
+      }
+
+      const accessToken = jwt.sign(
+        {
+          UserInfo: {
+            userId: foundUser._id,
+          },
+        },
+        process.env.ACCESS_TOKEN_SECRET!,
+        { expiresIn: "15m" } //15m
+      );
+
+      const refreshToken = jwt.sign(
+        { userId: foundUser._id },
+        process.env.REFRESH_TOKEN_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      // Create secure cookie with refresh token
+      res.cookie("jwt", refreshToken, {
+        httpOnly: true, //accessible only by web server
+        secure: true, //https
+        sameSite: "none", //cross-site cookie
+        maxAge: 7 * 24 * 60 * 60 * 1000, //cookie expiry: set to match rT
+        // maxAge: 5 * 1000, //cookie expiry: set to match rT
+      });
+
+      // Send accessToken containing username and roles
+      res.json({ accessToken });
+    } catch (error: any) {
+      console.log("[SOCIAL_USER_ERROR]:", error);
+      next(error.message);
     }
   }
 );
 
 // clear cookies
-const logout = (req: Request, res: Response) => {
+export const logout = (req: Request, res: Response) => {
   const cookies = req.cookies;
   if (!cookies?.jwt) return res.sendStatus(204); //No content
   res.clearCookie("jwt", { httpOnly: true, sameSite: "none", secure: true });
@@ -196,7 +251,6 @@ export const refresh = CatchAsyncError(
       process.env.REFRESH_TOKEN_SECRET!,
       async (err: any, decoded: any) => {
         if (err) return next(new ErrorHandler("Forbidden", 403));
-
         const foundUser = await User.findOne({
           _id: decoded.userId,
         }).exec();
@@ -267,7 +321,7 @@ export const forgotPassoword = CatchAsyncError(
         message: `Please check your email: ${user.email} for OTP.`,
         activationToken: activationToken.token,
       });
-    } catch (error:any) {
+    } catch (error: any) {
       console.log("[FORGET_PASSWORD_ERROR]:", error);
       return next(error.message);
     }

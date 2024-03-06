@@ -25,4 +25,12 @@ export interface IActivationRequest {
 export interface ILoginRequest {
   email: string;
   password: string;
+  avatar?: string;
+  name?: string;
+}
+export interface ISocialAuthRequest {
+  email: string;
+  password?: string;
+  avatar: string;
+  name: string;
 }

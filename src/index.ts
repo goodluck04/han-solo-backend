@@ -7,6 +7,7 @@ import connectDB from "./config/connectDB";
 import { ErrorMiddleware } from "./middleware/extendError";
 import { v2 as cloudinary } from "cloudinary";
 import authRoutes from "./routes/authRoutes";
+import userRoutes from "./routes/userRoutes";
 
 // appp initialised
 const app = express();
@@ -27,15 +28,15 @@ app.use(
     credentials: true,
   })
 );
-console.log(process.env.FRONTEND_URL)
+console.log(process.env.FRONTEND_URL);
 
 // health
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ message: "API is working!" });
 });
 
-
-app.use("/v1/api/auth",authRoutes)
+app.use("/v1/api/auth", authRoutes);
+app.use("/v1/api/user", userRoutes);
 
 // listening
 app.listen(process.env.PORT, () => {

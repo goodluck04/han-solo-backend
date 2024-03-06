@@ -53,3 +53,43 @@ export const validationLoginRequest = [
       .withMessage("Please enter valid password"),
     handleValidationErrors,
   ];
+
+export const validationSocialAuthRequest = [
+    body("email")
+      .isString()
+      .notEmpty()
+      .isEmail()
+      .withMessage("Please enter valid email"),
+    body("name")
+      .isString()
+      .notEmpty()
+      .withMessage("Please enter your name."),
+    body("avatar")
+      .isString()
+      .notEmpty()
+      .withMessage("Please enter your avatar url."),
+    handleValidationErrors,
+  ];
+export const validationForgotPasswordRequest = [
+    body("email")
+      .isString()
+      .notEmpty()
+      .isEmail()
+      .withMessage("Please enter valid email"),
+    handleValidationErrors,
+  ];
+export const validationChangPasswordRequest = [
+    body("activation_token")
+      .isString()
+      .notEmpty()
+      .withMessage("Please enter activation_token"),
+    body("activation_code")
+      .isString()
+      .notEmpty()
+      .withMessage("Please enter activation_code"),
+    body("newPassword")
+      .isString()
+      .notEmpty()
+      .withMessage("Please enter password"),
+    handleValidationErrors,
+  ];
