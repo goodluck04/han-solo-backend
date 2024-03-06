@@ -10,24 +10,23 @@ import userRoutes from "./routes/userRoutes";
 
 // appp initialised
 const app = express();
- 
+
 // cloudinary cofig
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_SECRET_KEY,
 });
-// middleware 
+// middleware
 app.use(express.json({ limit: "50mb" }));
+app.use(cookieParser());
 app.use(
   cors({
-    origin: process.env.CLIENT_URI,
+    origin: ["https://han-solo-frontend.vercel.app/", "http://localhost:3000"],
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
   })
 );
-// cookie parser
-app.use(cookieParser());
-
 
 // health
 app.get("/health", (req: Request, res: Response) => {
