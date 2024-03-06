@@ -19,13 +19,15 @@ cloudinary.config({
 });
 // middleware 
 app.use(express.json({ limit: "50mb" }));
-app.use(cookieParser());
 app.use(
   cors({
     origin: process.env.CLIENT_URI,
     credentials: true,
   })
 );
+// cookie parser
+app.use(cookieParser());
+
 
 // health
 app.get("/health", (req: Request, res: Response) => {
