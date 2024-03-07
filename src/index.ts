@@ -7,9 +7,11 @@ import { ErrorMiddleware } from "./middleware/extendError";
 import { v2 as cloudinary } from "cloudinary";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
+import path from "path";
 
 // appp initialised
 const app = express();
+app.use(express.static(path.join(__dirname, 'public')));
 
 // cloudinary cofig
 cloudinary.config({
