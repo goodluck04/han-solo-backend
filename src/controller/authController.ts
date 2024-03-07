@@ -197,6 +197,7 @@ export const socialAuth = CatchAsyncError(
           email,
           password: hashedPassword,
           username: finalUsername,
+          phone:"XXXXXXXXXX"
         });
       }
 
