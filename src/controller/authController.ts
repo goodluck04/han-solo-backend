@@ -14,6 +14,8 @@ import {
   ISocialAuthRequest,
 } from "../@types/types";
 import generatePassword from "../utils/randomPasswordGenerator";
+import path from "path";
+import ejs from "ejs";
 
 // register user
 export const registrationUser = CatchAsyncError(
@@ -39,21 +41,30 @@ export const registrationUser = CatchAsyncError(
       const activationCode = activationToken.activationCode;
       const data = { user: { name: user.email }, activationCode };
       //   send the dynamica data to the ejs
+      const html = await ejs.renderFile(
+        path.join(__dirname, "../mail/activation-mail.ejs"),
+        data
+      );
 
-      await SendMail({
-        email: user.email,
-        subject: "Activate your account",
-        template: "activation-mail.ejs",
-        data,
-      });
-      res.status(201).json({
-        success: true,
-        message: `Please check your email: ${user.email} to activate your account`,
-        activationToken: activationToken.token,
-      });
-    } catch (error) {
+      try {
+        await SendMail({
+          email: user.email,
+          subject: "Activate your account",
+          template: "activation-mail.ejs",
+          data,
+        });
+        res.status(201).json({
+          success: true,
+          message: `Please check your email: ${user.email} to activate your account`,
+          activationToken: activationToken.token,
+        });
+      } catch (error: any) {
+        console.log("[RESTER_EMAIL_SEND_ERROR]:", error);
+        return next(error.message);
+      }
+    } catch (error: any) {
       console.log("REGISTER-USER-ERROR", error);
-      return next(error);
+      return next(error.message);
     }
   }
 );
@@ -197,7 +208,7 @@ export const socialAuth = CatchAsyncError(
           email,
           password: hashedPassword,
           username: finalUsername,
-          phone:"XXXXXXXXXX"
+          phone: "XXXXXXXXXX",
         });
       }
 
@@ -314,19 +325,29 @@ export const forgotPassoword = CatchAsyncError(
       const activationCode = activationToken.activationCode;
       const data = { user: { name: user.email }, activationCode };
 
-      // send email
-      await SendMail({
-        email: user.email,
-        subject: "Change your password",
-        template: "activation-mail.ejs",
-        data,
-      });
+      const html = await ejs.renderFile(
+        path.join(__dirname, "../mail/activation-mail.ejs"),
+        data
+      );
 
-      res.status(200).json({
-        success: true,
-        message: `Please check your email: ${user.email} for OTP.`,
-        activationToken: activationToken.token,
-      });
+      // send email
+      try {
+        await SendMail({
+          email: user.email,
+          subject: "Change your password",
+          template: "activation-mail.ejs",
+          data,
+        });
+
+        res.status(200).json({
+          success: true,
+          message: `Please check your email: ${user.email} for OTP.`,
+          activationToken: activationToken.token,
+        });
+      } catch (error:any) {
+        console.log("[FORGET_PASSWORD_EMAIL_ERROR]:", error);
+        next(error.message);
+      }
     } catch (error: any) {
       console.log("[FORGET_PASSWORD_ERROR]:", error);
       return next(error.message);
