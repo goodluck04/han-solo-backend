@@ -187,11 +187,16 @@ export const socialAuth = CatchAsyncError(
 
       if (!foundUser) {
         const hashedPassword = await bcrypt.hash(generatePassword(), 10);
+        // create username
+        const username = email.split("@")[0];
+        const randomNumber = Math.floor(Math.random() * 10000); // Generate a random number between 0 and 9999
+        const finalUsername = `${username}${randomNumber}`;
         foundUser = await User.create({
           name,
           avatar,
           email,
           password: hashedPassword,
+          username: finalUsername,
         });
       }
 
